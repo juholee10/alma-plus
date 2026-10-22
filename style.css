@@ -1,0 +1,161 @@
+#alma-plus-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+#alma-plus-add-btn,
+#alma-plus-export-btn {
+  display: inline-block;
+  padding: 8px 14px;
+  background: #2f6fed;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+#alma-plus-add-btn:hover {
+  background: #1d55c9;
+}
+
+#alma-plus-export-btn {
+  background: #fff;
+  color: #2f6fed;
+  box-shadow: inset 0 0 0 1px #2f6fed;
+}
+#alma-plus-export-btn:hover {
+  background: #eef4ff;
+}
+
+.alma-plus-cal-btn {
+  background: none;
+  border: none;
+  line-height: 0;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  opacity: 0.6;
+}
+.alma-plus-cal-btn:hover {
+  opacity: 1;
+}
+
+tr[data-alma-plus-row] {
+  background: #eef4ff;
+}
+
+.alma-plus-due-cell {
+  font-weight: 600;
+  color: #2f6fed;
+}
+
+.alma-plus-name-cell {
+  position: relative;
+  padding-right: 32px !important;
+}
+
+.alma-plus-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #2f6fed;
+  background: #dbe8ff;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+}
+
+.alma-plus-title {
+  display: block;
+}
+
+.alma-plus-delete {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #99a1af;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+}
+.alma-plus-delete:hover {
+  color: #d33;
+}
+
+#alma-plus-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+}
+
+#alma-plus-modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
+  width: 320px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#alma-plus-modal h3 {
+  margin: 0 0 14px;
+  font-size: 16px;
+  color: #111;
+}
+
+#alma-plus-modal label {
+  display: block;
+  font-size: 12px;
+  color: #444;
+  margin-bottom: 10px;
+}
+
+#alma-plus-modal input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+.alma-plus-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.alma-plus-modal-actions button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#alma-plus-cancel {
+  background: #eee;
+  color: #333;
+}
+
+#alma-plus-save {
+  background: #2f6fed;
+  color: #fff;
+}
