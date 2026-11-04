@@ -1,7 +1,9 @@
 const STORAGE_KEY = "almaPlusCustomTasks";
+const BACKUP_FORMAT = "alma-plus-task-backup";
 
 let bodyObserver = null;
 let debounceTimer = null;
+let activeFilter = "all";
 
 async function loadTasks() {
   const result = await chrome.storage.local.get(STORAGE_KEY);
@@ -14,13 +16,54 @@ async function saveTasks(tasks) {
 
 async function addTask(task) {
   const tasks = await loadTasks();
-  tasks.push({ id: crypto.randomUUID(), ...task });
+  tasks.push({ id: crypto.randomUUID(), completed: false, priority: "normal", ...task });
   await saveTasks(tasks);
+}
+
+async function updateTask(updatedTask) {
+  const tasks = await loadTasks();
+  await saveTasks(tasks.map((task) => task.id === updatedTask.id ? updatedTask : task));
 }
 
 async function deleteTask(id) {
   const tasks = await loadTasks();
   await saveTasks(tasks.filter((t) => t.id !== id));
+}
+
+async function setTaskCompleted(id, completed) {
+  const tasks = await loadTasks();
+  await saveTasks(tasks.map((task) => task.id === id ? { ...task, completed } : task));
+}
+
+function isValidDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(0);
+  date.setHours(0, 0, 0, 0);
+  date.setFullYear(year, month - 1, day);
+  return date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day;
+}
+
+function normalizeTask(task) {
+  if (!task || typeof task !== "object" || Array.isArray(task)) return null;
+  if (typeof task.id !== "string" || !task.id.trim()) return null;
+  if (typeof task.name !== "string" || !task.name.trim()) return null;
+  if (typeof task.due !== "string" || !isValidDate(task.due)) return null;
+  if (task.category !== undefined && typeof task.category !== "string") return null;
+  if (task.notes !== undefined && typeof task.notes !== "string") return null;
+  if (task.completed !== undefined && typeof task.completed !== "boolean") return null;
+  if (task.priority !== undefined && !["low", "normal", "high"].includes(task.priority)) return null;
+  return {
+    id: task.id,
+    name: task.name.trim(),
+    category: task.category?.trim() || "",
+    due: task.due,
+    notes: task.notes?.trim() || "",
+    completed: task.completed ?? false,
+    priority: task.priority || "normal",
+  };
 }
 
 function findAssignmentsTable() {
@@ -130,6 +173,7 @@ function getRowAssignment(row) {
 
   const link = nameCell.querySelector("a[href]")?.href || "";
   const custom = row.dataset.almaPlusRow === "true";
+  const task = custom ? row._almaPlusTask : null;
   return {
     uid: row.dataset.almaPlusId || `${toCalendarDate(due)}-${category}-${name}`,
     name,
@@ -137,6 +181,7 @@ function getRowAssignment(row) {
     due,
     link,
     custom,
+    notes: task?.notes || "",
   };
 }
 
@@ -150,7 +195,8 @@ function buildEventTitle(a) {
 
 function buildEventDetails(a) {
   const source = a.custom ? "Personal task added via Alma+" : "Assignment from Alma";
-  return a.link ? `${source}\n${a.link}` : source;
+  const details = [source, a.notes, a.link].filter(Boolean);
+  return details.join("\n");
 }
 
 function buildGoogleCalendarUrl(a) {
@@ -275,6 +321,9 @@ function buildCustomRow(task, columnCount) {
   const row = document.createElement("tr");
   row.dataset.almaPlusRow = "true";
   row.dataset.almaPlusId = task.id;
+  const completed = Boolean(task.completed);
+  const priorityValue = ["low", "high"].includes(task.priority) ? task.priority : "normal";
+  row._almaPlusTask = { ...task, completed, priority: priorityValue };
 
   const dueDate = new Date(task.due + "T00:00:00");
 
@@ -293,6 +342,7 @@ function buildCustomRow(task, columnCount) {
 
   const title = document.createElement("div");
   title.className = "alma-plus-title";
+  if (completed) title.classList.add("alma-plus-completed-title");
   if (task.category) {
     const cat = document.createElement("strong");
     cat.textContent = task.category;
@@ -300,6 +350,50 @@ function buildCustomRow(task, columnCount) {
     title.appendChild(document.createElement("br"));
   }
   title.appendChild(document.createTextNode(task.name));
+
+  const metadata = document.createElement("div");
+  metadata.className = "alma-plus-metadata";
+  if (priorityValue !== "normal") {
+    const priority = document.createElement("span");
+    priority.className = `alma-plus-priority alma-plus-priority-${priorityValue}`;
+    priority.textContent = `${priorityValue} priority`;
+    metadata.appendChild(priority);
+  }
+  if (task.notes) {
+    const notes = document.createElement("span");
+    notes.className = "alma-plus-notes";
+    notes.textContent = task.notes;
+    metadata.appendChild(notes);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "alma-plus-task-actions";
+
+  const completeLabel = document.createElement("label");
+  completeLabel.className = "alma-plus-complete-label";
+  completeLabel.addEventListener("click", (e) => e.stopPropagation());
+  const completeCheckbox = document.createElement("input");
+  completeCheckbox.type = "checkbox";
+  completeCheckbox.checked = completed;
+  completeCheckbox.setAttribute("aria-label", `Mark ${task.name} ${completed ? "incomplete" : "complete"}`);
+  completeCheckbox.addEventListener("change", async (e) => {
+    e.stopPropagation();
+    await setTaskCompleted(task.id, completeCheckbox.checked);
+    renderCustomRows();
+  });
+  completeLabel.appendChild(completeCheckbox);
+  completeLabel.appendChild(document.createTextNode("Done"));
+  actions.appendChild(completeLabel);
+
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "alma-plus-edit";
+  editBtn.textContent = "Edit";
+  editBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openModal(task);
+  });
+  actions.appendChild(editBtn);
 
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
@@ -314,7 +408,10 @@ function buildCustomRow(task, columnCount) {
 
   nameCell.appendChild(badge);
   nameCell.appendChild(title);
+  nameCell.appendChild(metadata);
+  nameCell.appendChild(actions);
   nameCell.appendChild(deleteBtn);
+  if (completed) row.classList.add("alma-plus-completed-row");
 
   row.appendChild(dueCell);
   row.appendChild(nameCell);
@@ -360,6 +457,7 @@ async function renderCustomRows() {
     }
 
     ensureCalendarButtons(tbody);
+    applyAssignmentFilter(tbody);
   } finally {
     bodyObserver?.observe(document.body, { childList: true, subtree: true });
   }
@@ -370,7 +468,7 @@ function buildAddButton() {
   btn.id = "alma-plus-add-btn";
   btn.type = "button";
   btn.textContent = "+ Add my own task";
-  btn.addEventListener("click", openModal);
+  btn.addEventListener("click", () => openModal());
   return btn;
 }
 
@@ -384,6 +482,143 @@ function buildExportButton() {
   return btn;
 }
 
+function buildBackupButton() {
+  const btn = document.createElement("button");
+  btn.id = "alma-plus-backup-btn";
+  btn.type = "button";
+  btn.textContent = "Back up tasks";
+  btn.title = "Download your custom tasks as a JSON backup";
+  btn.addEventListener("click", exportTaskBackup);
+  return btn;
+}
+
+function buildImportButton() {
+  const btn = document.createElement("button");
+  btn.id = "alma-plus-import-btn";
+  btn.type = "button";
+  btn.textContent = "Restore tasks";
+  btn.title = "Import custom tasks from a JSON backup";
+  btn.addEventListener("click", () => document.getElementById("alma-plus-import-input").click());
+  return btn;
+}
+
+function buildFilter() {
+  const label = document.createElement("label");
+  label.id = "alma-plus-filter-label";
+  label.textContent = "Show: ";
+  const select = document.createElement("select");
+  select.id = "alma-plus-filter";
+  for (const [value, text] of [
+    ["all", "All assignments"],
+    ["today", "Due today"],
+    ["week", "Due this week"],
+    ["overdue", "Overdue"],
+  ]) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = text;
+    select.appendChild(option);
+  }
+  select.value = activeFilter;
+  select.addEventListener("change", () => {
+    activeFilter = select.value;
+    const table = findAssignmentsTable();
+    if (table) applyAssignmentFilter(getTbody(table));
+  });
+  label.appendChild(select);
+  return label;
+}
+
+function applyAssignmentFilter(tbody) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+
+  for (const row of tbody.rows) {
+    const assignment = getRowAssignment(row);
+    if (!assignment) continue;
+    const due = new Date(
+      assignment.due.getFullYear(),
+      assignment.due.getMonth(),
+      assignment.due.getDate()
+    );
+    const show = activeFilter === "all" ||
+      (activeFilter === "today" && due.getTime() === today.getTime()) ||
+      (activeFilter === "week" && due >= weekStart && due < weekEnd) ||
+      (activeFilter === "overdue" && due < today);
+    row.hidden = !show;
+  }
+}
+
+async function exportTaskBackup() {
+  const tasks = await loadTasks();
+  const backup = {
+    format: BACKUP_FORMAT,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tasks,
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `alma-plus-tasks-${toCalendarDate(new Date())}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function importTaskBackup(file) {
+  let backup;
+  try {
+    backup = JSON.parse(await file.text());
+  } catch (error) {
+    alert(`Could not read the backup file: ${error.message}`);
+    return;
+  }
+
+  if (!backup || backup.format !== BACKUP_FORMAT || backup.version !== 1 || !Array.isArray(backup.tasks)) {
+    alert("This is not a supported Alma+ task backup.");
+    return;
+  }
+
+  const importedTasks = backup.tasks.map(normalizeTask);
+  if (importedTasks.some((task) => !task)) {
+    alert("The backup contains an invalid task. No tasks were imported.");
+    return;
+  }
+
+  const currentTasks = await loadTasks();
+  const ids = new Set(currentTasks.map((task) => task.id));
+  const mergedTasks = [...currentTasks];
+  for (const task of importedTasks) {
+    const id = ids.has(task.id) ? crypto.randomUUID() : task.id;
+    ids.add(id);
+    mergedTasks.push({ ...task, id });
+  }
+  await saveTasks(mergedTasks);
+  alert(`Restored ${importedTasks.length} task${importedTasks.length === 1 ? "" : "s"}. Existing tasks were kept.`);
+  renderCustomRows();
+}
+
+function buildImportInput() {
+  const input = document.createElement("input");
+  input.id = "alma-plus-import-input";
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.hidden = true;
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    if (file) await importTaskBackup(file);
+    input.value = "";
+  });
+  return input;
+}
+
 function ensureAddButton() {
   const table = findAssignmentsTable();
   if (table && !document.getElementById("alma-plus-add-btn")) {
@@ -391,11 +626,15 @@ function ensureAddButton() {
     toolbar.id = "alma-plus-toolbar";
     toolbar.appendChild(buildAddButton());
     toolbar.appendChild(buildExportButton());
+    toolbar.appendChild(buildBackupButton());
+    toolbar.appendChild(buildImportButton());
+    toolbar.appendChild(buildFilter());
     table.before(toolbar);
+    table.before(buildImportInput());
   }
 }
 
-function openModal() {
+function openModal(existingTask = null) {
   if (document.getElementById("alma-plus-modal-overlay")) return;
 
   const overlay = document.createElement("div");
@@ -411,6 +650,16 @@ function openModal() {
     <label>Class / category (optional)
       <input type="text" id="alma-plus-input-category" placeholder="e.g. P5 AP Biology">
     </label>
+    <label>Notes (optional)
+      <textarea id="alma-plus-input-notes" rows="3" placeholder="Add a reminder"></textarea>
+    </label>
+    <label>Priority
+      <select id="alma-plus-input-priority">
+        <option value="low">Low</option>
+        <option value="normal">Normal</option>
+        <option value="high">High</option>
+      </select>
+    </label>
     <label>Due date
       <input type="date" id="alma-plus-input-date">
     </label>
@@ -423,6 +672,14 @@ function openModal() {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
+  modal.querySelector("h3").textContent = existingTask ? "Edit your task" : "Add your own task";
+  modal.querySelector("#alma-plus-save").textContent = existingTask ? "Save" : "Add";
+  modal.querySelector("#alma-plus-input-name").value = existingTask?.name || "";
+  modal.querySelector("#alma-plus-input-category").value = existingTask?.category || "";
+  modal.querySelector("#alma-plus-input-notes").value = existingTask?.notes || "";
+  modal.querySelector("#alma-plus-input-priority").value = existingTask?.priority || "normal";
+  modal.querySelector("#alma-plus-input-date").value = existingTask?.due || "";
+
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) overlay.remove();
   });
@@ -430,14 +687,25 @@ function openModal() {
   modal.querySelector("#alma-plus-save").addEventListener("click", async () => {
     const name = modal.querySelector("#alma-plus-input-name").value.trim();
     const category = modal.querySelector("#alma-plus-input-category").value.trim();
+    const notes = modal.querySelector("#alma-plus-input-notes").value.trim();
+    const priority = modal.querySelector("#alma-plus-input-priority").value;
     const due = modal.querySelector("#alma-plus-input-date").value;
 
-    if (!name || !due) {
-      alert("Please fill in at least a task name and due date.");
+    if (!name || !due || !isValidDate(due)) {
+      alert("Please enter a task name and a valid due date.");
       return;
     }
 
-    await addTask({ name, category, due });
+    const task = {
+      ...(existingTask || {}),
+      name,
+      category,
+      notes,
+      priority,
+      due,
+    };
+    if (existingTask) await updateTask(task);
+    else await addTask(task);
     overlay.remove();
     renderCustomRows();
   });

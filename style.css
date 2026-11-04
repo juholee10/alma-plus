@@ -6,7 +6,9 @@
 }
 
 #alma-plus-add-btn,
-#alma-plus-export-btn {
+#alma-plus-export-btn,
+#alma-plus-backup-btn,
+#alma-plus-import-btn {
   display: inline-block;
   padding: 8px 14px;
   background: #2f6fed;
@@ -29,6 +31,34 @@
 }
 #alma-plus-export-btn:hover {
   background: #eef4ff;
+}
+
+#alma-plus-backup-btn,
+#alma-plus-import-btn {
+  background: #fff;
+  color: #374151;
+  box-shadow: inset 0 0 0 1px #9ca3af;
+}
+#alma-plus-backup-btn:hover,
+#alma-plus-import-btn:hover {
+  background: #f3f4f6;
+}
+
+#alma-plus-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #444;
+  font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#alma-plus-filter {
+  padding: 7px 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font: inherit;
 }
 
 .alma-plus-cal-btn {
@@ -55,8 +85,7 @@ tr[data-alma-plus-row] {
 }
 
 .alma-plus-name-cell {
-  position: relative;
-  padding-right: 32px !important;
+  min-width: 180px;
 }
 
 .alma-plus-badge {
@@ -75,21 +104,73 @@ tr[data-alma-plus-row] {
   display: block;
 }
 
-.alma-plus-delete {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: #99a1af;
-  font-size: 18px;
-  line-height: 1;
+.alma-plus-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 4px;
+  color: #555;
+  font-size: 12px;
+}
+
+.alma-plus-priority {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.alma-plus-priority-high {
+  color: #b42318;
+}
+.alma-plus-priority-low {
+  color: #667085;
+}
+
+.alma-plus-notes {
+  white-space: pre-wrap;
+}
+
+.alma-plus-completed-row {
+  opacity: 0.65;
+}
+.alma-plus-completed-title {
+  text-decoration: line-through;
+}
+
+.alma-plus-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.alma-plus-complete-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #555;
   cursor: pointer;
-  padding: 4px;
+}
+
+.alma-plus-task-actions button {
+  padding: 2px 6px;
+  border: 1px solid #d0d5dd;
+  border-radius: 4px;
+  background: #fff;
+  color: #344054;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.alma-plus-delete {
+  position: static;
+  transform: none;
+  color: #667085 !important;
+  font-size: 14px !important;
 }
 .alma-plus-delete:hover {
-  color: #d33;
+  color: #d33 !important;
 }
 
 #alma-plus-modal-overlay {
@@ -124,7 +205,9 @@ tr[data-alma-plus-row] {
   margin-bottom: 10px;
 }
 
-#alma-plus-modal input {
+#alma-plus-modal input,
+#alma-plus-modal textarea,
+#alma-plus-modal select {
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -133,6 +216,11 @@ tr[data-alma-plus-row] {
   border: 1px solid #ccc;
   border-radius: 5px;
   box-sizing: border-box;
+}
+
+#alma-plus-modal textarea {
+  resize: vertical;
+  font-family: inherit;
 }
 
 .alma-plus-modal-actions {

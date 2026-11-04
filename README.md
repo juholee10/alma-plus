@@ -23,5 +23,13 @@ If a bug fix or a new version is released, you would have to manually update the
 
 All updates to Google Calendar are one-time, so if any new assignments are added or an assignment is modified, you will have to add to Google Calendar again.
 
+## Custom task features
+
+- **Edit tasks** to update the name, class/category, notes, priority, or due date.
+- **Mark tasks done** with the checkbox; completed tasks remain visible and are shown with a strikethrough.
+- **Filter assignments** to see everything, items due today, items due this week (Monday through Sunday), or overdue items.
+- **Back up and restore tasks** using the JSON buttons. Restoring merges tasks into the current list and keeps existing tasks; ID conflicts are imported as separate tasks.
+- **Notes and priority** are shown with your custom tasks. Notes are also included when adding a task to Google Calendar or exporting the calendar file.
+
 ## Bugs
 If you happen to find a bug, please contact `beomgyu.kim@seoulacademy.org` or `juho.lee@seoulacademy.org`. 
