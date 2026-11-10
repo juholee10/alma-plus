@@ -67,21 +67,42 @@ function normalizeTask(task) {
 }
 
 function findAssignmentsTable() {
-  const byClass = document.querySelector("table.upcoming-assignments");
-  if (byClass) return byClass;
+  return findAssignmentsTables()[0] || null;
+}
 
-  const tables = document.querySelectorAll("table");
-  for (const table of tables) {
-    const headerText = (
-      table.querySelector("thead")?.textContent ||
-      table.rows[0]?.textContent ||
-      ""
-    ).toLowerCase();
-    if (headerText.includes("due") && headerText.includes("assignment")) {
-      return table;
-    }
-  }
-  return null;
+function getTableHeaders(table) {
+  const headerRow = table.tHead?.rows[0] || table.rows[0];
+  return [...(headerRow?.cells || [])].map((cell) =>
+    cell.textContent.trim().toLowerCase()
+  );
+}
+
+function getAssignmentColumns(table) {
+  const headers = getTableHeaders(table);
+  const dueIndex = headers.findIndex((text) => /\bdue\b|\bdate\b/.test(text));
+  const nameIndex = headers.findIndex((text) =>
+    /\bassignment\b|\btask\b|\bto\s*do\b|\btodo\b|\bname\b|\btitle\b/.test(text)
+  );
+
+  return dueIndex !== -1 && nameIndex !== -1 && dueIndex !== nameIndex
+    ? { dueIndex, nameIndex }
+    : { dueIndex: 0, nameIndex: 1 };
+}
+
+function isAssignmentsTable(table) {
+  if (table.matches("table.upcoming-assignments")) return true;
+
+  const headerText = getTableHeaders(table).join(" ");
+  return /\bdue\b|\bdate\b/.test(headerText) &&
+    /\bassignment\b|\btask\b|\bto\s*do\b|\btodo\b|\bname\b|\btitle\b/.test(headerText);
+}
+
+function findAssignmentsTables() {
+  const tables = [...document.querySelectorAll("table")].filter(isAssignmentsTable);
+  const upcomingTable = tables.find((table) => table.matches("table.upcoming-assignments"));
+  return upcomingTable
+    ? [upcomingTable, ...tables.filter((table) => table !== upcomingTable)]
+    : tables;
 }
 
 function getTbody(table) {
@@ -96,7 +117,7 @@ function getActiveSort(table) {
     (th) => th.classList.contains("sort-asc") || th.classList.contains("sort-desc")
   );
   if (activeIndex === -1) {
-    return { columnIndex: 0, numeric: true, direction: 1 };
+    return { columnIndex: getAssignmentColumns(table).dueIndex, numeric: true, direction: 1 };
   }
   const th = sortableThs[activeIndex];
   return {
@@ -154,7 +175,9 @@ function nextDay(date) {
 
 // name cell is <strong>Class</strong><br>Assignment name, in alma's rows and ours
 function getRowAssignment(row) {
-  const [dueCell, nameCell] = row.cells;
+  const { dueIndex, nameIndex } = getAssignmentColumns(row.closest("table"));
+  const dueCell = row.cells[dueIndex];
+  const nameCell = row.cells[nameIndex];
   if (!dueCell || !nameCell) return null;
 
   const due = parseAlmaDueCellDate(dueCell);
@@ -229,12 +252,16 @@ function buildCalendarButton(row) {
   return btn;
 }
 
-function ensureCalendarButtons(tbody) {
-  for (const row of tbody.rows) {
-    const nameCell = row.cells[1];
-    if (!nameCell || nameCell.querySelector(".alma-plus-cal-btn")) continue;
-    if (!getRowAssignment(row)) continue;
-    nameCell.appendChild(buildCalendarButton(row));
+function ensureCalendarButtons() {
+  for (const table of findAssignmentsTables()) {
+    const tbody = getTbody(table);
+    const { nameIndex } = getAssignmentColumns(table);
+    for (const row of tbody.rows) {
+      const nameCell = row.cells[nameIndex];
+      if (!nameCell || nameCell.querySelector(".alma-plus-cal-btn")) continue;
+      if (!getRowAssignment(row)) continue;
+      nameCell.appendChild(buildCalendarButton(row));
+    }
   }
 }
 
@@ -317,7 +344,7 @@ function exportIcs() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function buildCustomRow(task, columnCount) {
+function buildCustomRow(task, columnCount, columns) {
   const row = document.createElement("tr");
   row.dataset.almaPlusRow = "true";
   row.dataset.almaPlusId = task.id;
@@ -413,11 +440,14 @@ function buildCustomRow(task, columnCount) {
   nameCell.appendChild(deleteBtn);
   if (completed) row.classList.add("alma-plus-completed-row");
 
-  row.appendChild(dueCell);
-  row.appendChild(nameCell);
-
-  for (let i = 2; i < columnCount; i++) {
-    row.appendChild(document.createElement("td"));
+  const cells = Array.from(
+    { length: Math.max(columnCount, columns.dueIndex + 1, columns.nameIndex + 1) },
+    () => document.createElement("td")
+  );
+  cells[columns.dueIndex] = dueCell;
+  cells[columns.nameIndex] = nameCell;
+  for (const cell of cells) {
+    row.appendChild(cell);
   }
 
   return row;
@@ -439,9 +469,10 @@ async function renderCustomRows() {
       existingRows[0]?.cells.length ||
       table.querySelector("thead tr")?.cells.length ||
       2;
+    const columns = getAssignmentColumns(table);
 
     for (const task of tasks) {
-      const row = buildCustomRow(task, columnCount);
+      const row = buildCustomRow(task, columnCount, columns);
       const rowValue = getCellSortValue(row, sort.columnIndex);
 
       const target = existingRows.find((r) => {
@@ -456,7 +487,7 @@ async function renderCustomRows() {
       }
     }
 
-    ensureCalendarButtons(tbody);
+    ensureCalendarButtons();
     applyAssignmentFilter(tbody);
   } finally {
     bodyObserver?.observe(document.body, { childList: true, subtree: true });
@@ -468,7 +499,11 @@ function buildAddButton() {
   btn.id = "alma-plus-add-btn";
   btn.type = "button";
   btn.textContent = "+ Add my own task";
-  btn.addEventListener("click", () => openModal());
+  btn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openModal();
+  });
   return btn;
 }
 
