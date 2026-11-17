@@ -10,7 +10,9 @@ The Alma+ Custom Tasks is an extension that adds convenient features for Seoul A
 5. Click **Load unpacked** and select this project folder.
 6. Open Alma's todo tab and you should be able to access the features this extension offers.
 
-If a bug fix or a new version is released, you would have to manually update the extension by deleting the previous version and uploading the new one.
+Keep the extension folder where it is after loading it. Your custom tasks are stored in the browser under that folder's location, so moving, renaming or loading it from a different folder starts you with an empty task list. Use the backup button first if you ever need to move it.
+
+To update, download the new version and copy its files over the old folder (same location), then click the reload icon on the extension's card in `chrome://extensions`. Do not remove the extension to update it: removing it deletes your saved tasks.
 
 ## Google Calendar
 
@@ -30,6 +32,10 @@ All updates to Google Calendar are one-time, so if any new assignments are added
 - **Filter assignments** to see everything, items due today, items due this week (Monday through Sunday), or overdue items.
 - **Back up and restore tasks** using the JSON buttons. Restoring merges tasks into the current list and keeps existing tasks; ID conflicts are imported as separate tasks.
 - **Notes and priority** are shown with your custom tasks. Notes are also included when adding a task to Google Calendar or exporting the calendar file.
+
+## GPA
+
+On the Classes tab, a box above the class list shows your GPA on an unweighted 4.0 scale, calculated from the letter grades Alma shows (A = 4.0, A- = 3.7, B+ = 3.3, and so on). Classes without a grade are skipped, and cocurricular, advisory and study hall classes are left out by default. Use the checkbox in a class's Grade column to include or leave it out. Your choices are saved in the browser.
 
 ## Bugs
 If you happen to find a bug, please contact `beomgyu.kim@seoulacademy.org` or `juho.lee@seoulacademy.org`. 

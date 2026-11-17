@@ -247,3 +247,38 @@ tr[data-alma-plus-row] {
   background: #2f6fed;
   color: #fff;
 }
+
+.alma-plus-gpa-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: #eef4ff;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.alma-plus-gpa-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+}
+
+.alma-plus-gpa-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2f6fed;
+}
+
+.alma-plus-gpa-note {
+  font-size: 12px;
+  color: #666;
+}
+
+.alma-plus-gpa-check {
+  margin-left: 8px;
+  vertical-align: middle;
+  cursor: pointer;
+}

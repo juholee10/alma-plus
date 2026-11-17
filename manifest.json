@@ -16,7 +16,7 @@
         "https://*.getalma.com/*",
         "https://*.alma.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["content.js", "gpa.js"],
       "css": ["style.css"],
       "run_at": "document_idle"
     }
